@@ -7,10 +7,16 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-df_2024 = pd.read_excel('BASE DE DADOS PEDE 2024 - DATATHON.xlsx', sheet_name='PEDE2024')
-df_2023 = pd.read_excel('BASE DE DADOS PEDE 2024 - DATATHON.xlsx', sheet_name='PEDE2023')
-df_2022 = pd.read_excel('BASE DE DADOS PEDE 2024 - DATATHON.xlsx', sheet_name='PEDE2022')
+excel_path = os.path.join(
+    BASE_DIR,
+    "BASE DE DADOS PEDE 2024 - DATATHON.xlsx"
+)
+
+df_2024 = pd.read_excel(excel_path, sheet_name='PEDE2024')
+df_2023 = pd.read_excel(excel_path, sheet_name='PEDE2023')
+df_2022 = pd.read_excel(excel_path, sheet_name='PEDE2022')
 # # Featuring engineering
 # ## Arredondamento dos dados numéricos
 def featuringEngineering():
