@@ -5,19 +5,20 @@ from modelo import padronizar_base
 from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.preprocessing import StandardScaler
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 excel_path = os.path.join(
     BASE_DIR,
-    "BASE DE DADOS PEDE 2024 - DATATHON.xlsx"
+    "baseDados.xlsx"
 )
 
 df_2024 = pd.read_excel(excel_path, sheet_name='PEDE2024')
 df_2023 = pd.read_excel(excel_path, sheet_name='PEDE2023')
 df_2022 = pd.read_excel(excel_path, sheet_name='PEDE2022')
+
 # # Featuring engineering
 # ## Arredondamento dos dados numéricos
 def featuringEngineering():
