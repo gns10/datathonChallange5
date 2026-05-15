@@ -68,9 +68,9 @@ def createModel(df_modelo):
     y = df_model['TARGET_RISCO']
 
     df_model["IDADE"] = (
-    df_model["IDADE"]
-    .apply(corrigir_idade)
-    )
+        df_model["IDADE"]
+        .apply(corrigir_idade)
+        )
 
     X["GENERO"] = (
         X["GENERO"]

@@ -32,6 +32,8 @@ def strip_accents(s):
     return "".join(c for c in s if not unicodedata.combining(c))
 
 
+
+
 def normalize_text(x):
     s = strip_accents(x)
     s = s.upper().strip()
@@ -148,24 +150,29 @@ def corrigir_idade(x):
     if pd.isna(x):
         return np.nan
 
-    # Se for string parecida com datetime
-    if isinstance(x, str) and '1900-' in x:
-        return pd.to_datetime(x).day
-
-    # Timestamp
+    # Se virou datetime do Excel
     if isinstance(x, (pd.Timestamp, datetime)):
         return x.day
 
+    # Se já é número
     try:
         return int(float(x))
     except:
         return np.nan
 
+def _strip_accents(s: str) -> str:
+    """Remove acentos e normaliza string para facilitar regras."""
+    if s is None:
+        return ""
+    s = str(s)
+    s = unicodedata.normalize("NFKD", s)
+    return "".join([c for c in s if not unicodedata.combining(c)])
+
 def norm_txt(x) -> str:
     """Normaliza: lower, sem acento, sem espaços extras."""
     if pd.isna(x):
         return ""
-    s = strip_accents(x)
+    s = _strip_accents(x)
     s = s.strip().lower()
     s = " ".join(s.split())
     return s

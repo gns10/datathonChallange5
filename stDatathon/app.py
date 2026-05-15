@@ -1,13 +1,14 @@
 import streamlit as st
-from mlBackEnd import createModel, recebeDados, defasagem_aluno
-from normalizaBase import baseNormalizada
+from mlBackEnd import recebeDados, defasagem_aluno
 import joblib
 
-df_modelo = baseNormalizada()
-createModel(df_modelo)  
+#df_modelo = baseNormalizada()
+#createModel(df_modelo)  
 
 st.set_page_config(page_title="ML do aluno")
 
+
+artefato = joblib.load("modelo_risco_defasagem.pkl")
 st.title("Probabilidade de Defasagem")
 
 genero = st.radio("Gênero", ('Masculino', 'Feminino'), index=0)
@@ -45,7 +46,6 @@ if st.button("Calcular Risco"):
         ENSINO_GRUPO_Privada= ensino_privado,
         ENSINO_GRUPO_Pública= ensino_publico,
     )
-    artefato = joblib.load("modelo_risco_defasagem.pkl")
     prob_risco = defasagem_aluno(dados, artefato)
     # Saída
     st.subheader("Resultado")
