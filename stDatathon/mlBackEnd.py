@@ -1,233 +1,197 @@
+from datetime import datetime
 import pandas as pd
 import joblib
-import os
-from modelo import padronizar_base
+import numpy as np
+from modelo import  corrigir_idade
 from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 
+def createModel(df_modelo):
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-excel_path = os.path.join(
-    BASE_DIR,
-    "baseDados.xlsx"
+    df_modelo = df_modelo.sort_values(
+    ["RA", "ANO"]
 )
 
-df_2024 = pd.read_excel(excel_path, sheet_name='PEDE2024')
-df_2023 = pd.read_excel(excel_path, sheet_name='PEDE2023')
-df_2022 = pd.read_excel(excel_path, sheet_name='PEDE2022')
-
-# # Featuring engineering
-# ## Arredondamento dos dados numéricos
-def featuringEngineering():
-    # Definindo colunas padrão
-    COLUNAS_PADRAO = {
-    # Identificação
-    'RA',
-    'NOME',
-    'ANO',
-    'FASE',
-    'FASE_IDEAL',
-    'DEFASAGEM',
-    'IAN',
-    'IDA',
-    'NOTA_MAT',
-    'NOTA_PORT',
-    'NOTA_ING',
-    'IEG',
-    'IPS',
-    'IPP',
-    'ANO_INGRESSO',
-    'INSTITUICAO_ENSINO',
-    'GENERO',
-    'IDADE'
-    }
-
-    MAP_2022 = {
-    'RA': 'RA',
-    'Nome': 'NOME',
-    'Fase': 'FASE',
-    'Fase ideal': 'FASE_IDEAL',
-    'Defas': 'DEFASAGEM',
-    'IAN': 'IAN',
-    'IDA': 'IDA',
-    'Matem': 'NOTA_MAT',
-    'Portug': 'NOTA_PORT',
-    'Inglês': 'NOTA_ING',
-    'IEG': 'IEG',
-    'IPS': 'IPS',
-    'IAA': 'IAA', 
-    'Ano ingresso': 'ANO_INGRESSO',
-    'Instituição de ensino': 'INSTITUICAO_ENSINO',
-    'Gênero': 'GENERO',
-    'Idade 22': 'IDADE'
-    }
-
-    MAP_2023 = {
-    'RA': 'RA',
-    'Nome Anonimizado': 'NOME',
-    'Fase': 'FASE',
-    'Fase Ideal': 'FASE_IDEAL',
-    'Defasagem': 'DEFASAGEM',
-    'IAN': 'IAN',
-    'IDA': 'IDA',
-    'Mat': 'NOTA_MAT',
-    'Por': 'NOTA_PORT',
-    'Ing': 'NOTA_ING',
-    'IEG': 'IEG',
-    'IPS': 'IPS',
-    'IPP': 'IPP',
-    'Ano ingresso': 'ANO_INGRESSO',
-    'Instituição de ensino': 'INSTITUICAO_ENSINO',
-    'Gênero': 'GENERO',
-    'Idade': 'IDADE'
-    }
-
-    MAP_2024 = {
-    'RA': 'RA',
-    'Nome Anonimizado': 'NOME',
-    'Fase': 'FASE',
-    'Fase Ideal': 'FASE_IDEAL',
-    'Defasagem': 'DEFASAGEM',
-    'IAN': 'IAN',
-    'IDA': 'IDA',
-    'Mat': 'NOTA_MAT',
-    'Por': 'NOTA_PORT',
-    'Ing': 'NOTA_ING',
-    'IEG': 'IEG',
-    'IPS': 'IPS',
-    'IPP': 'IPP',
-    'Ano ingresso': 'ANO_INGRESSO',
-    'Instituição de ensino': 'INSTITUICAO_ENSINO',
-    'Gênero': 'GENERO',
-    'Idade': 'IDADE'
-    }
-
-    df_2022_std = padronizar_base(df_2022, MAP_2022, 2022, COLUNAS_PADRAO)
-    df_2023_std = padronizar_base(df_2023, MAP_2023, 2023, COLUNAS_PADRAO)
-    df_2024_std = padronizar_base(df_2024, MAP_2024, 2024, COLUNAS_PADRAO)
-
-    #Trazendo todos os dados para um df único modelo
-    df_modelo = pd.concat([df_2022_std, df_2023_std, df_2024_std])
-
-
-    # Corrigindo as variáveis abaixo para numérico
-    for col in ['FASE', 'IDADE']:
-        df_modelo[col] = pd.to_numeric(df_modelo[col], errors='coerce')
-
-    return df_modelo
-
-
-def createModel(df_modelo):
-    # Ordenação da base
-    df = df_modelo.copy()
-    df = df.sort_values(['RA', 'ANO'])
-
-    #Criação da variação da defasagem
-    df['DELTA_DEFASAGEM'] = (
-        df
-        .groupby('RA')['DEFASAGEM']
+    df_modelo["DELTA_DEFASAGEM"] = (
+        df_modelo.groupby("RA")["DEFASAGEM"]
         .diff()
     )
+    df = df_modelo
+    df["TARGET_RISCO"] = np.where(
 
-    df['TARGET_RISCO'] = (df['DELTA_DEFASAGEM'] >= 0).astype(int)
+    # piorou
+    df["DELTA_DEFASAGEM"] > 0,
 
-    #Mantendo apenas alunos com histórico válido Delta diferented zero
+    1,
+
+    np.where(
+
+        # já estava defasado e continua
+        (
+            (df["DELTA_DEFASAGEM"] == 0)
+            &
+            (df["IAN"] < 10)
+        ),
+
+        1,
+
+        0
+    )
+)
     df_model = df[df['DELTA_DEFASAGEM'].notna()].copy()
-
-    FEATURES = [
-    # Estado atual
-    'DEFASAGEM',
-    'IAN',
     
+    FEATURES = [
+
     # Acadêmico
     'IDA',
-    'NOTA_MAT',
-    'NOTA_PORT',
-    'NOTA_ING',
-    
-    # Engajamento e suporte
+
+    # Engajamento / suporte
     'IEG',
     'IPS',
     'IPP',
-    
-    # Controle
+
+    # Estado atual do aluno
+    'IAN',
+
+    # Perfil
     'IDADE',
-    'ANO_INGRESSO'
+    'GENERO',
+    'ENSINO_GRUPO',
+
+    # Tempo na associação
+    'TEMPO_ASSOCIACAO'
     ]
 
     X = df_model[FEATURES]
     y = df_model['TARGET_RISCO']
 
-    for col in FEATURES:
-        X[f'{col}_MISS'] = X[col].isna().astype(int)
+    df_model["IDADE"] = (
+    df_model["IDADE"]
+    .apply(corrigir_idade)
+    )
 
-    imputer = SimpleImputer(strategy='median')
-    X_imputed = imputer.fit_transform(X)
+    X["GENERO"] = (
+        X["GENERO"]
+        .map({
+            "Feminino": 0,
+            "Masculino": 1
+        })
+    )
 
-    # Separação do treino x teste
+    X = pd.get_dummies(
+        X,
+        columns=["ENSINO_GRUPO"],
+        drop_first=True
+    )
 
+    X = X.copy()
+
+    imputer = SimpleImputer(
+        strategy="median"
+    )
+    
+    X['IDADE'] = pd.to_numeric(X['IDADE'], errors='coerce')
+
+    X_imputed = pd.DataFrame(
+        imputer.fit_transform(X),
+        columns=X.columns,
+        index=X.index
+    )
+
+    # ====================================
+    # Padronização (escala)
+    # ====================================
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X_imputed)
 
+    X_scaled = pd.DataFrame(
+        scaler.fit_transform(X_imputed),
+        columns=X.columns,
+        index=X.index
+    )
 
     X_train, X_test, y_train, y_test = train_test_split(
-        X_scaled,
-        y,
-        test_size=0.3,
+    X_scaled,
+    y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
+    )
+
+    model = LogisticRegression(
+        class_weight='balanced',
         random_state=42,
-        stratify=y
+        max_iter=1000
     )
 
-    modelo = LogisticRegression(
-        max_iter=1000,
-        class_weight='balanced'
-    )
+    # treino
+    model.fit(X_train, y_train)
 
-    modelo.fit(X_train, y_train)
-    joblib.dump(modelo, 'modelo.pkl')
-    joblib.dump(scaler, 'scaler.pkl')
-    joblib.dump(imputer, 'imputer.pkl')
-    return modelo
+    artefato_modelo = {
+
+        "model": model,  # ou calibrated_model se quiser usar calibrado
+
+        "scaler": scaler,
+
+        "imputer": imputer,
+
+        "features": X.columns.tolist(),
+
+        # opcional para o streamlit
+        "threshold": 0.50
+    }
+
+    joblib.dump(
+        artefato_modelo,
+        "modelo_risco_defasagem.pkl")
 
 
 # Função interativa para input de dados
-def recebeDados(defasagem, ian, ida, nota_mat, nota_port, nota_ing, ieg, ips, ipp, idade, ano_ingresso):
+def recebeDados(IAN, IDA, GENERO, TEMPO_ASSOCIACAO, ENSINO_GRUPO_Privada, ENSINO_GRUPO_Pública, IEG, IPS, IPP, IDADE):
     # Base com inputs
     dados = pd.DataFrame([{
-        'DEFASAGEM': defasagem,
-        'IAN': ian,
-        'IDA': ida,
-        'NOTA_MAT': nota_mat,
-        'NOTA_PORT': nota_port,
-        'NOTA_ING': nota_ing,
-        'IEG': ieg,
-        'IPS': ips,
-        'IPP': ipp,
-        'IDADE': idade,
-        'ANO_INGRESSO': ano_ingresso
+        "IDA": IDA,
+        "IEG": IEG,
+        "IPS": IPS,
+        "IPP": IPP,
+        "IAN": IAN,
+        "IDADE": IDADE,
+        "GENERO": GENERO,
+        "TEMPO_ASSOCIACAO": TEMPO_ASSOCIACAO,
+        "ENSINO_GRUPO_Privada": ENSINO_GRUPO_Privada,
+        "ENSINO_GRUPO_Pública": ENSINO_GRUPO_Pública,
     }])
 
     
     return dados
 
-def defasagem_aluno(dados):
-    modelo = joblib.load("modelo.pkl")
-    scaler = joblib.load("scaler.pkl")
-    imputer = joblib.load("imputer.pkl")
-    for col in dados.columns:
-        dados[f'{col}_MISS'] = dados[col].isna().astype(int)
+def defasagem_aluno(dados, artefato):
 
-    # Imputação + escala
-    X_imp = imputer.transform(dados)
-    X_scaled = scaler.transform(X_imp)
+    model = artefato["model"]
+    scaler = artefato["scaler"]
+    imputer = artefato["imputer"]
+    features = artefato["features"]
 
-    # Predição
-    prob_risco = modelo.predict_proba(X_scaled)[0, 1]
+    # garantir mesmas colunas do treino
+    dados = dados[features].copy()
 
-    return prob_risco
+    # imputar
+    dados_imp = pd.DataFrame(
+        imputer.transform(dados),
+        columns=features
+    )
+
+    # escalar
+    dados_scaled = pd.DataFrame(
+        scaler.transform(dados_imp),
+        columns=features
+    )
+
+    # previsão
+    dados["PROB_RISCO"] = model.predict_proba(dados_scaled)[:, 1]
+
+    return dados["PROB_RISCO"].iloc[0]
 
 
 
