@@ -2,11 +2,7 @@ import streamlit as st
 from mlBackEnd import recebeDados, defasagem_aluno
 import joblib
 
-#df_modelo = baseNormalizada()
-#createModel(df_modelo)  
-
 st.set_page_config(page_title="ML do aluno")
-
 
 artefato = joblib.load("modelo_risco_defasagem.pkl")
 st.title("Probabilidade de Defasagem")
